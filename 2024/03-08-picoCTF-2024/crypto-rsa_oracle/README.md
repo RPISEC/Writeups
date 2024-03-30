@@ -31,3 +31,34 @@ So the password is da099 and we get the flag with
 openssl enc -aes-256-cbc -d -in secret.enc -k da099
 ```
 picoCTF{su((3ss_(r@ck1ng_r3@_da099d93}
+
+Here is a single script to perform this entire process.
+```python
+from pwn import *
+import os 
+
+enc_password = 4228273471152570993857755209040611143227336245190875847649142807501848960847851973658239485570030833999780269457000091948785164374915942471027917017922546
+io = remote("titan.picoctf.net", 50551)
+io.recv()
+
+# encrypting "!"
+io.sendline("e")
+io.recv()
+io.sendline(b"!")
+response = io.recv().decode()
+encrypted_exclamation = response.split("ciphertext (m ^ e mod n)")[-1].split("\n")[0].strip()
+encrypted_exclamation = int(encrypted_exclamation)
+
+# send c_r * c_p to decrypt
+io.sendline("d")
+io.recv()
+io.sendline(str(encrypted_exclamation * enc_password))
+response = io.recv().decode()
+d = response.split("decrypted ciphertext as hex (c ^ d mod n):")[-1].split("\n")[0].strip()
+
+d = int(d, 16)
+password_hex = hex(d // ord("!"))
+password = ''.join([chr(int(password_hex[i:i+2], 16)) for i in range(2, len(password_hex), 2)])
+
+print(os.system(f"openssl enc -aes-256-cbc -d -in secret.enc -k {password}"))
+```
